@@ -52,7 +52,6 @@ extract_rates() {
     echo "$rate_figures"
 }
 
-
 # Check if xlsxwriter module is installed
 if ! python3 -c "import xlsxwriter" &> /dev/null; then
     echo "Error: Please install the xlsxwriter module for Python 3."
@@ -100,73 +99,34 @@ echo "]" >> "$json_file"
 python3 - <<EOF
 import xlsxwriter
 import json
-import openpyxl
 
 # Load data from JSON file
 with open("$json_file", "r") as f:
     data = json.load(f)
 
 # Create a new Excel workbook and worksheet
-workbook = xlsxwriter.Workbook("$output_folder/ConBilRate.xlsx")
+workbook = xlsxwriter.Workbook("$output_folder/consignee_and_bill_numbers_rates.xlsm")
 worksheet = workbook.add_worksheet()
 
-# Define a format for the title row
-title_format = workbook.add_format({'bold': True, 'bg_color': '#AA6E15'})
-
 # Write column headers
-worksheet.write_row(0, 0, ["Consignee", "Bill Number", "Rate 1", "Rate 2", "Rate 3"], title_format)
+worksheet.write(0, 0, "Consignee")
+worksheet.write(0, 1, "Bill Number")
+worksheet.write(0, 2, "Rate 1")
+worksheet.write(0, 3, "Rate 2")
+worksheet.write(0, 4, "Rate 3")
 
 # Write data to Excel worksheet
 row = 1
 for item in data:
-    worksheet.write_row(row, 0, [item["Consignee"], item["Bill Number"], item["Rate 1"], item["Rate 2"], item["Rate 3"]])
+    worksheet.write(row, 0, item["Consignee"])
+    worksheet.write(row, 1, item["Bill Number"])
+    worksheet.write(row, 2, item["Rate 1"])
+    worksheet.write(row, 3, item["Rate 2"])
+    worksheet.write(row, 4, item["Rate 3"])
     row += 1
-
-# Adjust column widths based on the maximum length of the longest cell value in each column
-for col_idx, col_data in enumerate(zip(*data)):
-    max_length = max(len(str(cell)) for cell in col_data) + 2  # Adding padding
-    worksheet.set_column(col_idx, col_idx, max_length)
-
-# Adjust cell widths based on the length of cell values plus padding before and after
-for row_idx, row_data in enumerate(data):
-    for col_idx, cell_value in enumerate(row_data.values()):
-        max_length = len(str(cell_value)) + 2  # Adding padding
-        worksheet.set_column(col_idx, col_idx, max_length)
 
 # Close the workbook
 workbook.close()
-
-# Load the Excel sheet again to update empty s2 and s3 rates based on matching s1 rates
-wb = openpyxl.load_workbook("$output_folder/ConBilRate.xlsx")
-ws = wb.active
-
-# Step 1: Find rows with empty s2 and s3 rates and their corresponding s1 rates
-empty_rates = {}
-for row in ws.iter_rows(min_row=2, values_only=True):
-    consignee, bill_number, rate_1, rate_2, rate_3 = row[0], row[1], row[2], row[3], row[4]
-    if rate_2 is None or rate_3 is None:
-        if rate_1 not in empty_rates:
-            empty_rates[rate_1] = []
-        empty_rates[rate_1].append((consignee, bill_number))
-
-# Step 2: Fill empty s2 and s3 rates based on matching s1 rates
-for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-    consignee, bill_number, rate_1, rate_2, rate_3 = row[0], row[1], row[2], row[3], row[4]
-    if rate_2 is None or rate_3 is None:
-        for other_row_idx, other_row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            if other_row_idx != row_idx:
-                other_rate_1, other_rate_2, other_rate_3 = other_row[2], other_row[3], other_row[4]
-                if rate_1 == other_rate_1:
-                    if rate_2 is None:
-                        ws.cell(row=row_idx, column=4, value=other_rate_2)
-                    if rate_3 is None:
-                        ws.cell(row=row_idx, column=5, value=other_rate_3)
-                    break
-
-
-# Save the updated workbook
-wb.save("$output_folder/ConBilRate_updated.xlsx")
-
 EOF
 
-echo "Excel spreadsheet 'ConBilRate_updated.xlsx' created successfully and saved in '$output_folder' folder."
+echo "Excel spreadsheet 'consignee_and_bill_numbers_rates.xlsx' created successfully and saved in '$output_folder' folder."
