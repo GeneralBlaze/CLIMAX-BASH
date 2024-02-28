@@ -52,28 +52,6 @@ extract_rates() {
     echo "$rate_figures"
 }
 
-# Function to extract dates from a PDF file
-extract_dates() {
-    local pdf_file="$1"
-    local extracted_text=$(pdftotext "$pdf_file" -)
-    
-    # Extract dates in the format mm/dd/yy using awk by scanning each line
-    local dates=$(echo "$extracted_text" | awk '{ for(i=1; i<=NF; i++) if($i ~ /^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2}$/) print $i }')
-    
-    # Sort the dates in ascending order
-    local sorted_dates=$(echo "$dates" | sort -t '/' -k 3n -k 1n -k 2n)
-
-    # Extract the earliest and latest dates
-    local earliest_date=$(echo "$sorted_dates" | head -n 1)
-    local latest_date=$(echo "$sorted_dates" | tail -n 1)
-
-    # Convert dates to dd-mmm-yyyy format
-    earliest_date_formatted=$(echo "$earliest_date" | awk -F'/' '{printf("%02d-%s-%02d", $2, substr("JanFebMarAprMayJunJulAugSepOctNovDec", ($1 - 1) * 3 + 1, 3), $3 + 2000)}')
-    latest_date_formatted=$(echo "$latest_date" | awk -F'/' '{printf("%02d-%s-%02d", $2, substr("JanFebMarAprMayJunJulAugSepOctNovDec", ($1 - 1) * 3 + 1, 3), $3 + 2000)}')
-
-    # Return the formatted earliest and latest dates
-    echo "$earliest_date_formatted $latest_date_formatted"
-}
 
 # Check if xlsxwriter module is installed
 if ! python3 -c "import xlsxwriter" &> /dev/null; then
@@ -106,19 +84,16 @@ for pdf_file in "${pdf_files[@]}"; do
     consignee=$(extract_consignee "$pdf_file")
     bill_numbers=$(extract_bill_numbers "$pdf_file")
     rates=$(extract_rates "$pdf_file")
-    dates=$(extract_dates "$pdf_file")  # Add this line to get the dates
     IFS=' ' read -r rate_1 rate_2 rate_3 <<< "$rates"
-    IFS=' ' read -r earliest_date latest_date <<< "$dates"  # Parse the dates
-    # Add consignee, bill numbers, rates, earliest date, and latest date to JSON file
+    # Add consignee, bill numbers, and rates to JSON file
     for bill_number in $bill_numbers; do
         # Check if bill number is already processed
         if ! [[ " ${processed_bill_numbers[@]} " =~ " $bill_number " ]]; then
-            echo "{ \"Consignee\": \"$consignee\", \"Bill Number\": \"$bill_number\", \"Rate 1\": \"$rate_1\", \"Rate 2\": \"$rate_2\", \"Rate 3\": \"$rate_3\", \"Discharge Date\": \"$earliest_date\", \"Paid Through Date\": \"$latest_date\" }," >> "$json_file"
+            echo "{ \"Consignee\": \"$consignee\", \"Bill Number\": \"$bill_number\", \"Rate 1\": \"$rate_1\", \"Rate 2\": \"$rate_2\", \"Rate 3\": \"$rate_3\" }," >> "$json_file"
             processed_bill_numbers+=("$bill_number")
         fi
     done
 done
-
 
 # Remove the trailing comma and close the JSON array
 sed -i '' '$ s/,$//' "$json_file"
@@ -142,12 +117,12 @@ worksheet = workbook.add_worksheet()
 title_format = workbook.add_format({'bold': True, 'bg_color': '#AA6E15'})
 
 # Write column headers
-worksheet.write_row(0, 0, ["Consignee", "Bill Number", "Rate 1", "Rate 2", "Rate 3", "Discharge Date", "Paid through Date"], title_format)
+worksheet.write_row(0, 0, ["Consignee", "Bill Number", "Rate 1", "Rate 2", "Rate 3"], title_format)
 
 # Write data to Excel worksheet
 row = 1
 for item in data:
-    worksheet.write_row(row, 0, [item["Consignee"], item["Bill Number"], item["Rate 1"], item["Rate 2"], item["Rate 3"], item["Discharge Date"], item["Paid Through Date"]])
+    worksheet.write_row(row, 0, [item["Consignee"], item["Bill Number"], item["Rate 1"], item["Rate 2"], item["Rate 3"]])
     row += 1
 
 # Adjust column widths based on the maximum length of the longest cell value in each column
