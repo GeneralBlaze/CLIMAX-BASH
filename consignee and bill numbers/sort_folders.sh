@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Path to the folder containing PDF files
-pdf_folder="/Users/princewill/Downloads/Invoices and Recipts DCBTL/01-nov:29-nov/Reconciled 01-nov:29-nov 2023"
+pdf_folder="/Users/princewill/Downloads/Invoices and Recipts DCBTL/01-nov:29-nov/PERSONAL Reconciled 01-nov:29-nov 2023"
+
+# Path to the JSON file containing the list of names to compare against
+json_file="/Users/princewill/alx-interview/CLIMAX BASH/consignee and bill numbers/cosignee_names.json"
 
 # Function to normalize consignee names
 normalize_consignee_name() {
@@ -29,6 +32,22 @@ merge_folders() {
         fi
     done
 }
+
+rename_folders() {
+    names=$(jq -r '.names | .[]' "$json_file")
+
+    for name in $names; do
+        matched_folders=("$pdf_folder"/*"$name"*)
+        if [[ ${#matched_folders[@]} -gt 0 ]]; then
+            for matched_folder in "${matched_folders[@]}"; do
+                new_name=$(jq -r --arg name "$name" '.rename[$name]' "$json_file")
+                mv "$matched_folder" "$pdf_folder/$new_name"
+            done
+        fi
+    done
+}
+
+
 
 # Create a function to extract consignee names from PDF files
 extract_consignee_name() {
@@ -65,6 +84,7 @@ move_pdfs() {
 # Main function to sort PDF files by consignee
 sort_pdfs() {
     move_pdfs
+    rename_folders
 }
 
 # Call the main function
