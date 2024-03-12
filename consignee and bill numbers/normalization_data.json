@@ -1,0 +1,10 @@
+{
+    "names": ["melbach", "avantport", "leport", "orient"],
+    "rename": {
+      "melbach": "MEL-BACH ENTERPRISE",
+      "avantport": "AVANTPORT",
+      "leport": "LE'PORT ENTERPRISES",
+      "orient": "ORIENT LOGISTICS"
+    }
+  }
+  
