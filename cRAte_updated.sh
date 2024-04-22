@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Function to normalize consignee names
+normalize_consignee_name() {
+    local name="$1"
+    # Remove non-alphanumeric characters and replace with a common separator (e.g., underscore)
+    normalized_name=$(echo "$name" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+    echo "$normalized_name"
+}
+
 # Function to extract consignee information from a PDF file
 extract_consignee() {
     local pdf_file="$1"
@@ -109,6 +117,10 @@ import openpyxl
 with open("$json_file", "r") as f:
     data = json.load(f)
 
+# Load normalization data from separate JSON file
+with open("normalization_data.json", "r") as f:
+    normalization_data = json.load(f)
+
 # Create a new Excel workbook and worksheet
 workbook = xlsxwriter.Workbook("$output_folder/ConBilRate_${current_datetime}.xlsx")
 worksheet = workbook.add_worksheet()
@@ -122,7 +134,11 @@ worksheet.write_row(0, 0, ["Consignee", "Bill Number", "Rate 1", "Rate 2", "Rate
 # Write data to Excel worksheet
 row = 1
 for item in data:
-    worksheet.write_row(row, 0, [item["Consignee"], item["Bill Number"], item["Rate 1"], item["Rate 2"], item["Rate 3"]])
+    # Normalize consignee name if found in normalization data
+    consignee = item["Consignee"]
+    if consignee in normalization_data["names"]:
+        consignee = normalization_data["rename"][consignee]
+    worksheet.write_row(row, 0, [consignee, item["Bill Number"], item["Rate 1"], item["Rate 2"], item["Rate 3"]])
     row += 1
 
 # Adjust column widths based on the maximum length of the longest cell value in each column
